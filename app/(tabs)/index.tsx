@@ -1,74 +1,125 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Button, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { fetchItems, deleteItem } from '../backend/supabaseOperations';
+import { InventoryTypes } from '../backend/supabaseOperations';
+import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';  // Import useFocusEffect
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const IndexScreen: React.FC = () => {
+  const [items, setItems] = useState<InventoryTypes.InventoryItem[]>([]);
+  const router = useRouter();
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  // Function to fetch and update items
+  const loadItems = async () => {
+    const data = await fetchItems();
+    setItems(data);
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadItems();  // Reload items whenever the screen is focused
+    }, [])
   );
-}
+
+  const handleDelete = async (id: string) => {
+    await deleteItem(id);
+    setItems((prevItems) => prevItems.filter((item) => item.id !== id));
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.welcomeText}>Welcome to Wet the Spagh Igit</Text>
+
+      <TouchableOpacity
+        style={styles.addItemButton}
+        onPress={() => router.push('/(tabs)/AddItemScreen')}
+      >
+        <Text style={styles.addItemButtonText}>Add Item</Text>
+      </TouchableOpacity>
+
+      <FlatList
+        data={items}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.itemCard}>
+            <Text style={styles.itemText}>
+              <Text style={styles.itemName}>{item.name}</Text> {'\n'}
+              <Text style={styles.itemDetail}>Quantity: {item.quantity} pcs</Text> {'\n'}
+              <Text style={styles.itemDetail}>Price: ₱{item.price.toFixed(2)}</Text>
+            </Text>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => handleDelete(item.id)}
+            >
+              <Text style={styles.deleteButtonText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      />
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#f4f4f4',  // Light background color
+  },
+  welcomeText: {
+    fontSize: 24,
+    marginTop: 10,
+    marginBottom: 20,
+    fontWeight: 'bold',
+    color: '#333',  // Dark text color
+  },
+  addItemButton: {
+    backgroundColor: '#201b51',  // USTP Blue
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
+  addItemButtonText: {
+    color: '#fff',  // White text on blue button
+    fontSize: 18,
+  },
+  itemCard: {
+    backgroundColor: '#fff',  // White background for items
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  itemText: {
+    fontSize: 16,
     marginBottom: 8,
+    color: '#333',  // Dark text for items
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  itemName: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    color: '#201b51',  // USTP Blue for item name
+  },
+  itemDetail: {
+    fontSize: 16,
+    color: '#333',  // Dark text for details
+  },
+  deleteButton: {
+    backgroundColor: '#fdb813',  // USTP Yellow
+    padding: 8,
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#fff',  // White text on yellow button
+    fontSize: 14,
   },
 });
+
+export default IndexScreen;
